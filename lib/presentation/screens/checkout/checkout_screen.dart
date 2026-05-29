@@ -1,41 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../providers/cart_provider.dart';
+import 'package:trendora/data/models/cart_model.dart';
 
-import '../../../data/models/order_model.dart';
+import 'package:trendora/data/services/order_service.dart';
 
-import '../../../data/services/auth_service.dart';
-import '../../../data/services/order_service.dart';
+import 'package:trendora/presentation/screens/checkout/order_success_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
-  const CheckoutScreen({super.key});
+  final List<CartModel> cartItems;
+
+  final double totalAmount;
+
+  const CheckoutScreen({
+    super.key,
+
+    required this.cartItems,
+
+    required this.totalAmount,
+  });
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  final addressController = TextEditingController();
-
-  final couponController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
 
   String paymentMethod = "Cash on Delivery";
 
-  double discount = 0;
+  bool isLoading = false;
 
   @override
   Widget build(BuildContext context) {
-    final cartItems = ref.watch(cartProvider);
-
-    double total = 0;
-
-    for (var item in cartItems) {
-      total += item.price * item.quantity;
-    }
-
-    final finalTotal = total - discount;
-
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -44,7 +41,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
         elevation: 0,
 
-        title: const Text("Checkout", style: TextStyle(color: Colors.black)),
+        centerTitle: true,
+
+        title: const Text(
+          "Checkout",
+
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
 
       body: SingleChildScrollView(
@@ -54,19 +57,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            /// ADDRESS
+            /// DELIVERY ADDRESS
             const Text(
               "Delivery Address",
 
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             TextField(
               controller: addressController,
 
-              maxLines: 3,
+              maxLines: 4,
 
               decoration: InputDecoration(
                 hintText: "Enter delivery address",
@@ -85,237 +88,278 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
             const SizedBox(height: 30),
 
-            /// PAYMENT
+            /// PAYMENT METHOD
             const Text(
               "Payment Method",
 
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
-            DropdownButtonFormField(
-              value: paymentMethod,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
 
-              items: const [
-                DropdownMenuItem(
-                  value: "Cash on Delivery",
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
 
-                  child: Text("Cash on Delivery"),
-                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
 
-                DropdownMenuItem(value: "UPI", child: Text("UPI")),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: paymentMethod,
 
-                DropdownMenuItem(value: "Card", child: Text("Card")),
-              ],
+                  isExpanded: true,
 
-              onChanged: (value) {
-                setState(() {
-                  paymentMethod = value!;
-                });
-              },
-            ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: "Cash on Delivery",
 
-            const SizedBox(height: 30),
-
-            /// COUPON
-            const Text(
-              "Coupon Code",
-
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: couponController,
-
-                    decoration: InputDecoration(
-                      hintText: "Enter coupon",
-
-                      filled: true,
-
-                      fillColor: Colors.grey.shade100,
-
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-
-                        borderSide: BorderSide.none,
-                      ),
+                      child: Text("Cash on Delivery"),
                     ),
-                  ),
-                ),
 
-                const SizedBox(width: 12),
+                    DropdownMenuItem(value: "UPI", child: Text("UPI")),
 
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA14F62),
-                  ),
+                    DropdownMenuItem(
+                      value: "Credit/Debit Card",
 
-                  onPressed: () {
-                    if (couponController.text.trim() == "TREND10") {
-                      setState(() {
-                        discount = total * 0.1;
-                      });
+                      child: Text("Credit/Debit Card"),
+                    ),
+                  ],
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Coupon Applied")),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Invalid Coupon")),
-                      );
-                    }
+                  onChanged: (value) {
+                    setState(() {
+                      paymentMethod = value!;
+                    });
                   },
-
-                  child: const Text(
-                    "Apply",
-
-                    style: TextStyle(color: Colors.white),
-                  ),
                 ),
-              ],
+              ),
             ),
 
             const SizedBox(height: 30),
 
             /// ORDER SUMMARY
-            Container(
-              padding: const EdgeInsets.all(20),
+            const Text(
+              "Order Summary",
 
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
 
-                borderRadius: BorderRadius.circular(20),
-              ),
+            const SizedBox(height: 16),
 
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ListView.builder(
+              shrinkWrap: true,
 
-                    children: [const Text("Subtotal"), Text("₹$total")],
+              physics: const NeverScrollableScrollPhysics(),
+
+              itemCount: widget.cartItems.length,
+
+              itemBuilder: (context, index) {
+                final item = widget.cartItems[index];
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+
+                  padding: const EdgeInsets.all(12),
+
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+
+                    borderRadius: BorderRadius.circular(16),
+
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+
+                        blurRadius: 8,
+
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
 
-                  const SizedBox(height: 12),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                    children: [const Text("Discount"), Text("- ₹$discount")],
-                  ),
-
-                  const Divider(height: 30),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
+                  child: Row(
                     children: [
-                      const Text(
-                        "Total",
+                      /// IMAGE
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
 
-                        style: TextStyle(
-                          fontSize: 20,
+                        child: Image.network(
+                          item.image,
 
-                          fontWeight: FontWeight.bold,
+                          width: 80,
+
+                          height: 80,
+
+                          fit: BoxFit.cover,
                         ),
                       ),
 
-                      Text(
-                        "₹$finalTotal",
+                      const SizedBox(width: 14),
 
-                        style: const TextStyle(
-                          fontSize: 22,
+                      /// DETAILS
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
 
-                          color: Color(0xFFA14F62),
+                          children: [
+                            Text(
+                              item.title,
 
-                          fontWeight: FontWeight.bold,
+                              maxLines: 2,
+
+                              overflow: TextOverflow.ellipsis,
+
+                              style: const TextStyle(
+                                fontSize: 16,
+
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 6),
+
+                            Text(
+                              "Qty: ${item.quantity}",
+
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+
+                            /// SIZE
+                            if (item.size.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+
+                                child: Text(
+                                  "Size: ${item.size}",
+
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                              ),
+
+                            const SizedBox(height: 6),
+
+                            Text(
+                              "₹${item.price}",
+
+                              style: const TextStyle(
+                                color: Color(0xFFA14F62),
+
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 30),
+
+            /// TOTAL
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+              children: [
+                const Text(
+                  "Total Amount",
+
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                Text(
+                  "₹${widget.totalAmount}",
+
+                  style: const TextStyle(
+                    fontSize: 22,
+
+                    color: Color(0xFFA14F62),
+
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 40),
 
-            /// PLACE ORDER
+            /// PLACE ORDER BUTTON
             SizedBox(
               width: double.infinity,
 
-              height: 55,
+              height: 58,
 
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFA14F62),
 
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                 ),
 
-                onPressed: () async {
-                  if (addressController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Enter Address")),
-                    );
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        /// EMPTY ADDRESS
+                        if (addressController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Please enter address"),
+                            ),
+                          );
 
-                    return;
-                  }
+                          return;
+                        }
 
-                  final order = OrderModel(
-                    userId: AuthService().currentUser!.uid,
+                        setState(() {
+                          isLoading = true;
+                        });
 
-                    items: cartItems.map((item) {
-                      return {
-                        "title": item.title,
+                        /// PLACE ORDER
+                        await OrderService().placeOrder(
+                          cartItems: widget.cartItems,
 
-                        "size": item.size,
+                          totalAmount: widget.totalAmount,
 
-                        "quantity": item.quantity,
-                      };
-                    }).toList(),
+                          address: addressController.text,
 
-                    total: finalTotal,
+                          paymentMethod: paymentMethod,
+                        );
 
-                    address: addressController.text,
+                        if (!context.mounted) return;
 
-                    paymentMethod: paymentMethod,
+                        setState(() {
+                          isLoading = false;
+                        });
 
-                    status: "Order Placed",
-                  );
+                        /// SUCCESS
+                        Navigator.pushReplacement(
+                          context,
 
-                  await OrderService().placeOrder(order);
+                          MaterialPageRoute(
+                            builder: (_) => const OrderSuccessScreen(),
+                          ),
+                        );
+                      },
 
-                  ref.read(cartProvider.notifier).clearCart();
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Place Order",
 
-                  if (!context.mounted) {
-                    return;
-                  }
+                        style: TextStyle(
+                          color: Colors.white,
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Order Placed Successfully")),
-                  );
+                          fontSize: 18,
 
-                  Navigator.pop(context);
-                },
-
-                child: const Text(
-                  "Place Order",
-
-                  style: TextStyle(
-                    color: Colors.white,
-
-                    fontSize: 18,
-
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],

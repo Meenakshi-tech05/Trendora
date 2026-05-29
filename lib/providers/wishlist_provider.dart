@@ -1,24 +1,41 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/models/cart_model.dart';
+import 'package:trendora/data/models/wishlist_model.dart';
 
-class WishlistNotifier extends StateNotifier<List<CartModel>> {
+/// PROVIDER
+final wishlistProvider =
+    StateNotifierProvider<WishlistNotifier, List<WishlistModel>>(
+      (ref) => WishlistNotifier(),
+    );
+
+/// NOTIFIER
+class WishlistNotifier extends StateNotifier<List<WishlistModel>> {
   WishlistNotifier() : super([]);
 
-  void addToWishlist(CartModel product) {
-    final exists = state.any((item) => item.title == product.title);
+  /// ADD TO WISHLIST
+  void addToWishlist(WishlistModel product) {
+    final alreadyExists = state.any((item) => item.id == product.id);
 
-    if (!exists) {
-      state = [...state, product];
+    /// PREVENT DUPLICATES
+    if (alreadyExists) {
+      return;
     }
+
+    state = [...state, product];
   }
 
-  void removeFromWishlist(CartModel product) {
-    state = state.where((item) => item.title != product.title).toList();
+  /// REMOVE FROM WISHLIST
+  void removeFromWishlist(WishlistModel product) {
+    state = state.where((item) => item.id != product.id).toList();
+  }
+
+  /// CHECK IF EXISTS
+  bool isInWishlist(String productId) {
+    return state.any((item) => item.id == productId);
+  }
+
+  /// CLEAR WISHLIST
+  void clearWishlist() {
+    state = [];
   }
 }
-
-final wishlistProvider =
-    StateNotifierProvider<WishlistNotifier, List<CartModel>>((ref) {
-      return WishlistNotifier();
-    });

@@ -1,355 +1,284 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
-import '../../../providers/cart_provider.dart';
-import '../../../providers/wishlist_provider.dart';
+import 'package:trendora/presentation/screens/auth/login_screen.dart';
+import 'package:trendora/presentation/screens/order/order_tracking_screen.dart';
+import 'edit_profile_screen.dart';
+import 'manage_address_screen.dart';
+import '../order/order_history_screen.dart';
+import 'privacy_security_screen.dart';
 
-import '../../../data/services/auth_service.dart';
-import '../../../data/services/order_service.dart';
-
-import '../order/order_tracking_screen.dart';
-
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = AuthService().currentUser;
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
 
-    final cartItems = ref.watch(cartProvider);
-
-    final wishlistItems = ref.watch(wishlistProvider);
+    /// USER LOGGED OUT
+    if (user == null) {
+      return const LoginScreen();
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
 
       appBar: AppBar(
         backgroundColor: Colors.white,
-
         elevation: 0,
+        centerTitle: true,
 
-        title: const Text("Profile", style: TextStyle(color: Colors.black)),
+        title: const Text(
+          "Profile",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .snapshots(),
 
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, snapshot) {
+          /// LOADING
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          children: [
-            /// PROFILE SECTION
-            Center(
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
+          /// NO DATA
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text("User data not found"));
+          }
 
-                    backgroundColor: Colors.pink.shade100,
+          final data = snapshot.data!.data() as Map<String, dynamic>;
 
-                    child: const Icon(
-                      Icons.person,
+          final fullName = data['name'] ?? '';
 
-                      size: 60,
+          final email = data['email'] ?? '';
 
-                      color: Color(0xFFA14F62),
-                    ),
-                  ),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
 
-                  const SizedBox(height: 20),
+            child: Column(
+              children: [
+                /// PROFILE IMAGE
+                CircleAvatar(
+                  radius: 55,
 
-                  Text(
-                    user?.email ?? "Guest User",
+                  backgroundColor: const Color(0xFFF7D6DF),
+
+                  child: Text(
+                    fullName.isNotEmpty ? fullName[0].toUpperCase() : "U",
 
                     style: const TextStyle(
-                      fontSize: 22,
-
+                      fontSize: 42,
                       fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 40),
-
-            /// DASHBOARD
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-
-                    decoration: BoxDecoration(
-                      color: Colors.pink.shade50,
-
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-
-                    child: Column(
-                      children: [
-                        const Icon(Icons.shopping_cart),
-
-                        const SizedBox(height: 10),
-
-                        Text(
-                          "${cartItems.length}",
-
-                          style: const TextStyle(
-                            fontSize: 24,
-
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const Text("Cart Items"),
-                      ],
+                      color: Color(0xFFA14F62),
                     ),
                   ),
                 ),
 
-                const SizedBox(width: 16),
+                const SizedBox(height: 20),
 
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
+                /// WELCOME TEXT
+                Text(
+                  "Welcome, $fullName 👋",
 
-                    decoration: BoxDecoration(
-                      color: Colors.pink.shade50,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
 
-                      borderRadius: BorderRadius.circular(20),
+                const SizedBox(height: 8),
+
+                /// EMAIL
+                Text(
+                  email,
+
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                ),
+
+                const SizedBox(height: 40),
+
+                /// ACCOUNT SETTINGS
+                Align(
+                  alignment: Alignment.centerLeft,
+
+                  child: const Text(
+                    "Account Settings",
+
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                /// EDIT PROFILE
+                _buildTile(
+                  context: context,
+
+                  icon: Icons.person,
+
+                  title: "Edit Profile",
+
+                  onTap: () {
+                    Navigator.push(
+                      context,
+
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                /// MANAGE ADDRESS
+                _buildTile(
+                  context: context,
+
+                  icon: Icons.location_on,
+
+                  title: "Manage Address",
+
+                  onTap: () {
+                    Navigator.push(
+                      context,
+
+                      MaterialPageRoute(
+                        builder: (_) => const ManageAddressScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                /// ORDER HISTORY
+                _buildTile(
+                  context: context,
+
+                  icon: Icons.shopping_bag,
+
+                  title: "Order History",
+
+                  onTap: () {
+                    Navigator.push(
+                      context,
+
+                      MaterialPageRoute(
+                        builder: (_) => const OrderHistoryScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                /// PRIVACY
+                _buildTile(
+                  context: context,
+
+                  icon: Icons.lock,
+
+                  title: "Privacy & Security",
+
+                  onTap: () {
+                    Navigator.push(
+                      context,
+
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacySecurityScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 40),
+
+                /// LOGOUT BUTTON
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFA14F62),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
 
-                    child: Column(
-                      children: [
-                        const Icon(Icons.favorite),
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
 
-                        const SizedBox(height: 10),
+                      if (context.mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
 
-                        Text(
-                          "${wishlistItems.length}",
-
-                          style: const TextStyle(
-                            fontSize: 24,
-
-                            fontWeight: FontWeight.bold,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
                           ),
-                        ),
 
-                        const Text("Wishlist"),
-                      ],
+                          (route) => false,
+                        );
+                      }
+                    },
+
+                    child: const Text(
+                      "Logout",
+
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
+          );
+        },
+      ),
+    );
+  }
 
-            const SizedBox(height: 40),
+  Widget _buildTile({
+    required BuildContext context,
 
-            /// ORDER HISTORY
-            const Text(
-              "Order History",
+    required IconData icon,
 
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+    required String title,
 
-            const SizedBox(height: 20),
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
 
-            StreamBuilder<QuerySnapshot>(
-              stream: OrderService().getUserOrders(),
+      decoration: BoxDecoration(
+        color: Colors.white,
 
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+        borderRadius: BorderRadius.circular(16),
 
-                final orders = snapshot.data!.docs;
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
 
-                if (orders.isEmpty) {
-                  return Container(
-                    width: double.infinity,
+            blurRadius: 10,
 
-                    padding: const EdgeInsets.all(30),
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
 
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+      child: ListTile(
+        onTap: onTap,
 
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+        leading: Icon(icon, color: const Color(0xFFA14F62)),
 
-                    child: const Center(
-                      child: Text(
-                        "No Orders Yet",
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
 
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  shrinkWrap: true,
-
-                  physics: const NeverScrollableScrollPhysics(),
-
-                  itemCount: orders.length,
-
-                  itemBuilder: (context, index) {
-                    final order = orders[index];
-
-                    final status = order.data().toString().contains('status')
-                        ? order['status']
-                        : "Order Placed";
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 20),
-
-                      padding: const EdgeInsets.all(20),
-
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-
-                        children: [
-                          Text(
-                            "₹${order['total']}",
-
-                            style: const TextStyle(
-                              fontSize: 22,
-
-                              color: Color(0xFFA14F62),
-
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          Text(order['address']),
-
-                          const SizedBox(height: 10),
-
-                          Text(order['paymentMethod']),
-
-                          const SizedBox(height: 14),
-
-                          Text(
-                            "Status: $status",
-
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          const Text(
-                            "Products",
-
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          ...List.generate((order['items'] as List).length, (
-                            itemIndex,
-                          ) {
-                            final item = order['items'][itemIndex];
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-
-                              child: Text(
-                                "${item['title']}  -  Size ${item['size']}",
-
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                            );
-                          }),
-
-                          const SizedBox(height: 20),
-
-                          SizedBox(
-                            width: double.infinity,
-
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFA14F62),
-                              ),
-
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-
-                                  MaterialPageRoute(
-                                    builder: (context) => OrderTrackingScreen(
-                                      orderStatus: status,
-                                    ),
-                                  ),
-                                );
-                              },
-
-                              child: const Text(
-                                "Track Order",
-
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 40),
-
-            /// LOGOUT
-            SizedBox(
-              width: double.infinity,
-
-              height: 55,
-
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-
-                onPressed: () async {
-                  await AuthService().logout();
-
-                  if (!context.mounted) {
-                    return;
-                  }
-
-                  Navigator.pop(context);
-                },
-
-                child: const Text(
-                  "Logout",
-
-                  style: TextStyle(
-                    color: Colors.white,
-
-                    fontWeight: FontWeight.bold,
-
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
       ),
     );
   }

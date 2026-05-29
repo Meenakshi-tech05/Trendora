@@ -1,29 +1,67 @@
 class ProductModel {
   final String id;
+
   final String title;
-  final double price;
-  final String image;
+
   final String category;
+
+  final String description;
+
+  final String image;
+
+  final double price;
+
+  final List<String> sizes;
 
   ProductModel({
     required this.id,
+
     required this.title,
-    required this.price,
-    required this.image,
+
     required this.category,
+
+    required this.description,
+
+    required this.image,
+
+    required this.price,
+
+    required this.sizes,
   });
 
-  factory ProductModel.fromMap(String id, Map<String, dynamic> data) {
+  factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
-      id: id,
+      id: map['id'] ?? '',
 
-      title: data['title'] ?? '',
+      title: map['title'] ?? '',
 
-      price: (data['price'] ?? 0).toDouble(),
+      category: map['category'] ?? '',
 
-      image: data['image'] ?? '',
+      description: map['description'] ?? '',
 
-      category: data['category'] ?? '',
+      image: map['image'] ?? '',
+
+      price: (map['price'] ?? 0).toDouble(),
+
+      sizes: List<String>.from(map['sizes'] ?? []),
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+
+      'title': title,
+
+      'category': category,
+
+      'description': description,
+
+      'image': image,
+
+      'price': price,
+
+      'sizes': sizes,
+    };
   }
 }

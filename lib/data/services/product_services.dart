@@ -8,7 +8,7 @@ class ProductService {
   Stream<List<ProductModel>> getProducts() {
     return _firestore.collection('products').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
-        return ProductModel.fromMap(doc.id, doc.data());
+        return ProductModel.fromMap(doc.data());
       }).toList();
     });
   }

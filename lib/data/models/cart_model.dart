@@ -8,8 +8,10 @@ class CartModel {
   final int quantity;
 
   final String size;
+  final String id;
 
   CartModel({
+    required this.id,
     required this.title,
 
     required this.image,
@@ -23,6 +25,7 @@ class CartModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       "title": title,
 
       "image": image,
@@ -37,6 +40,7 @@ class CartModel {
 
   factory CartModel.fromMap(Map<String, dynamic> map) {
     return CartModel(
+      id: map['id'],
       title: map['title'] ?? "",
 
       image: map['image'] ?? "",
@@ -46,6 +50,28 @@ class CartModel {
       quantity: map['quantity'] ?? 1,
 
       size: map['size'] ?? "",
+    );
+  }
+  CartModel copyWith({
+    String? id,
+    String? title,
+    String? image,
+    double? price,
+    int? quantity,
+    String? size,
+  }) {
+    return CartModel(
+      id: id ?? this.id,
+
+      title: title ?? this.title,
+
+      image: image ?? this.image,
+
+      price: price ?? this.price,
+
+      quantity: quantity ?? this.quantity,
+
+      size: size ?? this.size,
     );
   }
 }

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/product_model.dart';
-import '../../data/models/cart_model.dart';
+import 'package:trendora/data/models/cart_model.dart';
+import 'package:trendora/data/models/product_model.dart';
+import 'package:trendora/data/models/wishlist_model.dart';
 
-import '../../providers/cart_provider.dart';
-import '../../providers/wishlist_provider.dart';
+import 'package:trendora/data/services/cart_service.dart';
 
-import '../../presentation/screens/product/product_details_screen.dart';
+import 'package:trendora/providers/wishlist_provider.dart';
+
+import 'package:trendora/presentation/screens/product/product_details_screen.dart';
 
 class ProductCard extends ConsumerWidget {
   final ProductModel product;
@@ -16,13 +18,15 @@ class ProductCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final CartService cartService = CartService();
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
 
           MaterialPageRoute(
-            builder: (context) => ProductDetailsScreen(product: product),
+            builder: (_) => ProductDetailsScreen(product: product),
           ),
         );
       },
@@ -31,9 +35,17 @@ class ProductCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white,
 
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
 
-          boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 10)],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+
+              blurRadius: 8,
+
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
 
         child: Column(
@@ -42,163 +54,172 @@ class ProductCard extends ConsumerWidget {
           children: [
             /// IMAGE
             Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
+              flex: 5,
 
-                      topRight: Radius.circular(20),
-                    ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
 
-                    child: Image.network(
-                      product.image,
+                  topRight: Radius.circular(18),
+                ),
 
-                      width: double.infinity,
+                child: Image.network(
+                  product.image,
 
-                      fit: BoxFit.cover,
+                  width: double.infinity,
 
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey.shade200,
-
-                          child: const Center(
-                            child: Icon(Icons.image, size: 50),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  /// WISHLIST
-                  Positioned(
-                    top: 10,
-                    right: 10,
-
-                    child: GestureDetector(
-                      onTap: () {
-                        ref
-                            .read(wishlistProvider.notifier)
-                            .addToWishlist(
-                              CartModel(
-                                title: product.title,
-
-                                image: product.image,
-
-                                price: product.price,
-
-                                quantity: 1,
-
-                                size: "",
-                              ),
-                            );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Added to Wishlist")),
-                        );
-                      },
-
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-
-                        child: const Icon(
-                          Icons.favorite_border,
-
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
 
             /// DETAILS
-            Padding(
-              padding: const EdgeInsets.all(12),
+            Expanded(
+              flex: 5,
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
 
-                children: [
-                  Text(
-                    product.title,
+                  vertical: 8,
+                ),
 
-                    maxLines: 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
-                    overflow: TextOverflow.ellipsis,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                  children: [
+                    /// TITLE
+                    Text(
+                      product.title,
 
-                      fontSize: 16,
+                      maxLines: 1,
+
+                      overflow: TextOverflow.ellipsis,
+
+                      style: const TextStyle(
+                        fontSize: 14,
+
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 8),
+                    /// CATEGORY
+                    Text(
+                      product.category,
 
-                  Text(
-                    "₹${product.price}",
+                      maxLines: 1,
 
-                    style: const TextStyle(
-                      color: Color(0xFFA14F62),
+                      overflow: TextOverflow.ellipsis,
 
-                      fontWeight: FontWeight.bold,
+                      style: TextStyle(
+                        fontSize: 12,
 
-                      fontSize: 18,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 12),
+                    /// PRICE + ACTIONS
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
-                  SizedBox(
-                    width: double.infinity,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            "₹${product.price}",
 
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFA14F62),
+                            overflow: TextOverflow.ellipsis,
 
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                            style: const TextStyle(
+                              color: Color(0xFFA14F62),
+
+                              fontSize: 14,
+
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
 
-                      onPressed: () {
-                        ref
-                            .read(cartProvider.notifier)
-                            .addToCart(
-                              CartModel(
-                                title: product.title,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
 
-                                image: product.image,
+                          children: [
+                            /// WISHLIST
+                            GestureDetector(
+                              onTap: () {
+                                ref
+                                    .read(wishlistProvider.notifier)
+                                    .addToWishlist(
+                                      WishlistModel(
+                                        id: product.id,
 
-                                price: product.price,
+                                        title: product.title,
 
-                                quantity: 1,
+                                        image: product.image,
 
-                                size: "",
+                                        price: product.price,
+                                      ),
+                                    );
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Added to Wishlist"),
+                                  ),
+                                );
+                              },
+
+                              child: const Icon(
+                                Icons.favorite_border,
+
+                                color: Colors.red,
+
+                                size: 18,
                               ),
-                            );
+                            ),
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Added to Cart")),
-                        );
-                      },
+                            const SizedBox(width: 10),
 
-                      child: const Text(
-                        "Add to Cart",
+                            /// CART
+                            GestureDetector(
+                              onTap: () async {
+                                await cartService.addToCart(
+                                  CartModel(
+                                    id: product.id,
 
-                        style: TextStyle(color: Colors.white),
-                      ),
+                                    title: product.title,
+
+                                    image: product.image,
+
+                                    price: product.price,
+
+                                    quantity: 1,
+
+                                    size: '',
+                                  ),
+                                );
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Added to Cart"),
+                                  ),
+                                );
+                              },
+
+                              child: const Icon(
+                                Icons.shopping_cart_outlined,
+
+                                color: Color(0xFFA14F62),
+
+                                size: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

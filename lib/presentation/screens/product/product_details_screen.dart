@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/models/product_model.dart';
-import '../../../data/models/cart_model.dart';
+import 'package:trendora/data/models/cart_model.dart';
+import 'package:trendora/data/models/product_model.dart';
+import 'package:trendora/data/models/wishlist_model.dart';
 
-import '../../../providers/cart_provider.dart';
+import 'package:trendora/data/services/cart_service.dart';
+
+import 'package:trendora/providers/wishlist_provider.dart';
 
 class ProductDetailsScreen extends ConsumerStatefulWidget {
   final ProductModel product;
@@ -17,17 +20,16 @@ class ProductDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
-  String selectedSize = "";
+  String selectedSize = '';
+
+  final CartService cartService = CartService();
 
   @override
   Widget build(BuildContext context) {
-    List<String> sizes = [];
+    final product = widget.product;
 
-    if (widget.product.category.toLowerCase() == "dresses") {
-      sizes = ["S", "M", "L", "XL"];
-    } else if (widget.product.category.toLowerCase() == "shoes") {
-      sizes = ["7", "8", "9", "10", "11"];
-    }
+    final bool hasSizes =
+        product.category == "Dresses" || product.category == "Shoes";
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -39,13 +41,19 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            /// IMAGE
-            SizedBox(
-              height: 400,
+            /// PRODUCT IMAGE
+            Container(
+              height: 380,
 
               width: double.infinity,
 
-              child: Image.network(widget.product.image, fit: BoxFit.cover),
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(product.image),
+
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
 
             Padding(
@@ -57,7 +65,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                 children: [
                   /// TITLE
                   Text(
-                    widget.product.title,
+                    product.title,
 
                     style: const TextStyle(
                       fontSize: 28,
@@ -70,26 +78,94 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
                   /// PRICE
                   Text(
-                    "₹${widget.product.price}",
+                    "₹${product.price}",
 
                     style: const TextStyle(
-                      fontSize: 24,
-
                       color: Color(0xFFA14F62),
 
+                      fontSize: 24,
+
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// WISHLIST BUTTON
+                  SizedBox(
+                    width: double.infinity,
+
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                      ),
+
+                      onPressed: () {
+                        ref
+                            .read(wishlistProvider.notifier)
+                            .addToWishlist(
+                              WishlistModel(
+                                id: product.id,
+
+                                title: product.title,
+
+                                image: product.image,
+
+                                price: product.price,
+                              ),
+                            );
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Added to Wishlist")),
+                        );
+                      },
+
+                      icon: const Icon(
+                        Icons.favorite_border,
+
+                        color: Colors.red,
+                      ),
+
+                      label: const Text(
+                        "Add to Wishlist",
+
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  /// DESCRIPTION
+                  const Text(
+                    "Description",
+
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    product.description,
+
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+
+                      fontSize: 16,
+
+                      height: 1.6,
                     ),
                   ),
 
                   const SizedBox(height: 30),
 
                   /// SIZE SECTION
-                  if (sizes.isNotEmpty) ...[
+                  if (hasSizes) ...[
                     const Text(
                       "Select Size",
 
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 22,
 
                         fontWeight: FontWeight.bold,
                       ),
@@ -100,7 +176,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     Wrap(
                       spacing: 12,
 
-                      children: sizes.map((size) {
+                      runSpacing: 12,
+
+                      children: product.sizes.map((size) {
                         final isSelected = selectedSize == size;
 
                         return GestureDetector(
@@ -112,7 +190,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
+                              horizontal: 22,
 
                               vertical: 14,
                             ),
@@ -139,61 +217,49 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       }).toList(),
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 40),
                   ],
 
-                  /// DESCRIPTION
-                  const Text(
-                    "Description",
-
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    "Premium quality fashion product with elegant styling and modern comfort.",
-
-                    style: TextStyle(fontSize: 16, height: 1.6),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  /// ADD TO CART
+                  /// ADD TO CART BUTTON
                   SizedBox(
                     width: double.infinity,
 
-                    height: 55,
+                    height: 58,
 
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFA14F62),
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                       ),
 
-                      onPressed: () {
-                        if (sizes.isNotEmpty && selectedSize.isEmpty) {
+                      onPressed: () async {
+                        /// SIZE VALIDATION
+                        if (hasSizes && selectedSize.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Select Size")),
+                            const SnackBar(content: Text("Please select size")),
                           );
 
                           return;
                         }
 
-                        ref
-                            .read(cartProvider.notifier)
-                            .addToCart(
-                              CartModel(
-                                title: widget.product.title,
+                        await cartService.addToCart(
+                          CartModel(
+                            id: product.id,
 
-                                image: widget.product.image,
+                            title: product.title,
 
-                                price: widget.product.price,
+                            image: product.image,
 
-                                quantity: 1,
+                            price: product.price,
 
-                                size: selectedSize,
-                              ),
-                            );
+                            quantity: 1,
+
+                            size: hasSizes ? selectedSize : '',
+                          ),
+                        );
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("Added to Cart")),
@@ -206,7 +272,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         style: TextStyle(
                           color: Colors.white,
 
-                          fontSize: 16,
+                          fontSize: 18,
 
                           fontWeight: FontWeight.bold,
                         ),
